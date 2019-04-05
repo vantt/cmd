@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/vantt/cmd"
+	"github.com/vantt/go-cmd"
 )
 
 func TestCmdOK(t *testing.T) {
