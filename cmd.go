@@ -62,6 +62,7 @@ type Cmd struct {
 	Args   []string
 	Env    []string
 	Dir    string
+	Stdin  chan string // streaming STDIN if enabled, else nil (see Options)
 	Stdout chan string // streaming STDOUT if enabled, else nil (see Options)
 	Stderr chan string // streaming STDERR if enabled, else nil (see Options)
 	*sync.Mutex
@@ -76,6 +77,7 @@ type Cmd struct {
 	statusChan chan Status   // nil until Start() called
 	doneChan   chan struct{} // closed when done running
 	buffered   bool          // buffer STDOUT and STDERR to Status.Stdout and Std
+	stdin      io.WriteCloser // STDIN Pipe from Command
 }
 
 // Status represents the running status and consolidated return of a Cmd. It can
@@ -139,6 +141,10 @@ type Options struct {
 	// faster and more efficient than polling Cmd.Status. The caller must read both
 	// streaming channels, else lines are dropped silently.
 	Streaming bool
+
+	// If true, Cmd.Stdin is created 
+	// and we can send data to STDIN through the Cmd.Stdin channel
+	Stdin bool
 }
 
 // NewCmdOptions creates a new Cmd with options. The command is not started
@@ -150,6 +156,11 @@ func NewCmdOptions(options Options, name string, args ...string) *Cmd {
 		out.Stdout = make(chan string, DEFAULT_STREAM_CHAN_SIZE)
 		out.Stderr = make(chan string, DEFAULT_STREAM_CHAN_SIZE)
 	}
+
+	if options.Stdin {
+		out.Stdin = make(chan string, DEFAULT_STREAM_CHAN_SIZE)
+	}
+
 	return out
 }
 
@@ -274,6 +285,16 @@ func (c *Cmd) run() {
 	// //////////////////////////////////////////////////////////////////////
 	cmd := exec.Command(c.Name, c.Args...)
 
+	// Keep Command's StdinPipe if option is enabled
+	if c.Stdin != nil {
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			panic("could not get Stdin pipe")
+		}
+
+		c.stdin = stdin
+	}
+
 	// Set process group ID so the cmd and all its children become a new
 	// process group. This allows Stop to SIGTERM the cmd's process group
 	// without killing this process (i.e. this code here).
@@ -330,6 +351,9 @@ func (c *Cmd) run() {
 	c.started = true
 	c.Unlock()
 
+	// Wait for INPUT from Stdin channel
+	c.captureStdin()
+
 	// //////////////////////////////////////////////////////////////////////
 	// Wait for command to finish or be killed
 	// //////////////////////////////////////////////////////////////////////
@@ -377,6 +401,46 @@ func (c *Cmd) run() {
 	c.status.Error = err
 	c.done = true
 	c.Unlock()
+}
+
+// WriteStdin support writting to StdinPipe...
+func (c *Cmd) WriteStdin(data string) {
+	if c.Stdin == nil {
+		panic("Stdin was not init")
+	}
+
+	c.Stdin <- data
+}
+
+// WriteCloseStdin writte to StdinPipe then close
+func (c *Cmd) WriteCloseStdin(data string) {
+	if c.Stdin == nil {
+		panic("Stdin was not init")
+	}
+
+	c.Stdin <- data
+	close(c.Stdin)
+}
+
+// CloseStdin Close the Stdin channel and StdinPipe
+func (c *Cmd) CloseStdin() {
+	if c.Stdin == nil {
+		panic("Stdin was not init")
+	}
+
+	close(c.Stdin)
+}
+
+func (c *Cmd) captureStdin() {
+	// get input from Stdin
+	if c.Stdin != nil {
+		go func() {
+			for in := range c.Stdin {
+				c.stdin.Write([]byte(in))
+			}
+			c.stdin.Close()
+		}()
+	}
 }
 
 // //////////////////////////////////////////////////////////////////////////

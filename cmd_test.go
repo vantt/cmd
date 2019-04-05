@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-cmd/cmd"
 	"github.com/go-test/deep"
+	"github.com/vantt/cmd"
 )
 
 func TestCmdOK(t *testing.T) {
@@ -1001,6 +1001,36 @@ func TestCmdNoOutput(t *testing.T) {
 	}
 	if len(s.Stdout) != 0 {
 		t.Errorf("got stdout, expected no output: %v", s.Stdout)
+	}
+	if len(s.Stderr) != 0 {
+		t.Errorf("got stderr, expected no output: %v", s.Stderr)
+	}
+}
+
+func TestCmdStdin(t *testing.T) {
+
+	// Set both output options to false to discard all output
+	p := cmd.NewCmdOptions(
+		cmd.Options{
+			Buffered:  true,
+			Streaming: false,
+			Stdin:     true,
+		},
+		"cat")
+
+	statChan := p.Start()
+
+	p.WriteStdin("hello1.")
+	p.WriteStdin("hello2.")
+	p.CloseStdin()
+
+	s := <-statChan
+
+	if s.Exit != 0 {
+		t.Errorf("got exit %d, expected 0", s.Exit)
+	}
+	if s.Stdout[0] != "hello1.hello2." {
+		t.Errorf("not expected output: %v", s.Stdout[0])
 	}
 	if len(s.Stderr) != 0 {
 		t.Errorf("got stderr, expected no output: %v", s.Stderr)

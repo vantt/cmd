@@ -4,6 +4,28 @@
 
 This package is a small but very useful wrapper around [os/exec.Cmd](https://golang.org/pkg/os/exec/#Cmd) for Linux and macOS that makes it safe and simple to run external commands in highly concurrent, asynchronous, real-time applications. Here's the look and feel:
 
+### Update: Now adding support for STDIN
+```go
+  // Set both output options to false to discard all output
+  opt :=  cmd.Options{
+      Stdin:     true,
+			Buffered:  true,
+			Streaming: false,
+  }
+  
+	p := cmd.NewCmdOptions(opt, "cat")
+
+	statChan := p.Start()
+
+	p.WriteStdin("hello1.")
+	p.WriteStdin("hello2.")
+	p.CloseStdin()
+
+	s := <-statChan
+```
+
+### Basic Usage
+
 ```go
 import "github.com/go-cmd/cmd"
 
