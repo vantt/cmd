@@ -6,22 +6,22 @@ This package is a small but very useful wrapper around [os/exec.Cmd](https://gol
 
 ### Update: Now adding support for STDIN
 ```go
-  // Set both output options to false to discard all output
-  opt :=  cmd.Options{
-      Stdin:     true,
-			Buffered:  true,
-			Streaming: false,
-  }
+// Set both output options to false to discard all output
+opt :=  cmd.Options{
+  Stdin:     true,
+  Buffered:  true,
+  Streaming: false,
+}
   
-	p := cmd.NewCmdOptions(opt, "cat")
+p := cmd.NewCmdOptions(opt, "cat")
 
-	statChan := p.Start()
+statChan := p.Start()
 
-	p.WriteStdin("hello1.")
-	p.WriteStdin("hello2.")
-	p.CloseStdin()
+p.WriteStdin("hello1.")
+p.WriteStdin("hello2.")
+p.CloseStdin()
 
-	s := <-statChan
+s := <-statChan
 ```
 
 ### Basic Usage
