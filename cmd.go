@@ -62,7 +62,7 @@ type Cmd struct {
 	Args   []string
 	Env    []string
 	Dir    string
-	Stdin  chan string // streaming STDIN if enabled, else nil (see Options)
+	Stdin  chan byte[] // streaming STDIN if enabled, else nil (see Options)
 	Stdout chan string // streaming STDOUT if enabled, else nil (see Options)
 	Stderr chan string // streaming STDERR if enabled, else nil (see Options)
 	*sync.Mutex
@@ -404,7 +404,7 @@ func (c *Cmd) run() {
 }
 
 // WriteStdin support writting to StdinPipe...
-func (c *Cmd) WriteStdin(data string) {
+func (c *Cmd) WriteStdin(data byte[]) {
 	if c.Stdin == nil {
 		panic("Stdin was not init")
 	}
@@ -413,7 +413,7 @@ func (c *Cmd) WriteStdin(data string) {
 }
 
 // WriteCloseStdin writte to StdinPipe then close
-func (c *Cmd) WriteCloseStdin(data string) {
+func (c *Cmd) WriteCloseStdin(data byte[]) {
 	if c.Stdin == nil {
 		panic("Stdin was not init")
 	}
@@ -436,7 +436,7 @@ func (c *Cmd) captureStdin() {
 	if c.Stdin != nil {
 		go func() {
 			for in := range c.Stdin {
-				c.stdin.Write([]byte(in))
+				c.stdin.Write(in)
 			}
 			c.stdin.Close()
 		}()
