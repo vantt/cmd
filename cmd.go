@@ -158,7 +158,7 @@ func NewCmdOptions(options Options, name string, args ...string) *Cmd {
 	}
 
 	if options.Stdin {
-		out.Stdin = make(chan string, DEFAULT_STREAM_CHAN_SIZE)
+		out.Stdin = make(chan []byte, DEFAULT_STREAM_CHAN_SIZE)
 	}
 
 	return out
